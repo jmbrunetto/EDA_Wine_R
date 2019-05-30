@@ -6,7 +6,10 @@
 ## Resume
 This is project is part of the Data Science Nanodegree course provided by Udacity. The goals of this project are apply all data handling, analyzing and transformation techniques seems during this course.
 
-In my project, we'll analyze the data of Red Wine dataset to try understand which variable it's more impactable to the wine's quality.  
+In my project, we'll analyze the data of Red Wine dataset to try understand which variable it's more impactable to the wine's quality.
+
+Objetivo:
+Explorar variáveis, estrutura, padrões, excentricidades e relacionamentos de um conjunto   
 
 ## Summary
 
@@ -16,6 +19,13 @@ In my project, we'll analyze the data of Red Wine dataset to try understand whic
 #### Compare Before/After
 ### Improving Dataset
 ### Looking for correlations
+
+#### Univariate Analysis
+- What is the structure of your dataset?
+- What is/are the main feature(s) of interest in your dataset?
+- What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+- Did you create any new variables from existing variables in the dataset?
+- Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
 
  
 
