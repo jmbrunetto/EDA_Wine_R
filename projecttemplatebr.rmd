@@ -663,29 +663,96 @@ Acredito que a interação mais importante realizada nesta secção, foi entre a
 
 ### Primeiro Gráfico
 ```{r echo=FALSE, Plot_One}
-
+gg_list1 = list(ggplot(data = wine, aes(x=fixed.acidity))+
+                  geom_histogram(binwidth = 0.5, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(4.5, 16)),
+                ggplot(data = wine, aes(x=volatile.acidity))+
+                  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0.1, 1.6)),       
+                ggplot(data = wine, aes(x=citric.acid))+
+                  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0, 1)))
+gg_list2 = list(ggplot(data = wine, aes(x=residual.sugar))+
+                  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0, 16)),
+                ggplot(data = wine, aes(x=chlorides))+
+                  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+                  scale_x_continuous(breaks = seq(0,0.05)),
+                ggplot(data = wine, aes(x=free.sulfur.dioxide))+
+                  geom_histogram(binwidth = 10, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0,75)))
+gg_list3 = list(ggplot(data = wine, aes(x=total.sulfur.dioxide))+
+                  geom_histogram(binwidth = 10, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(5,290)),
+                ggplot(data = wine, aes(x=density))+
+                  geom_histogram(binwidth = .001, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0.9900,1.0040)),
+                ggplot(data = wine, aes(x=pH))+
+                  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(2.700,4.010)))
+gg_list4 = list(ggplot(data = wine, aes(x=sulphates))+
+                  geom_histogram(binwidth = .2, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(0,2)),
+                ggplot(data = wine, aes(x=alcohol))+
+                  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+                  scale_x_continuous(limits = c(8,15)),
+                ggplot(data=wine, aes(x=quality)) +
+                  geom_bar(width = 1, color = 'black',fill = I('blue')))
+				  
+do.call(grid.arrange,c(gg_list1,gg_list2 ,gg_list3, gg_list4 , ncol = 3, nrow  =4))
+				  
 ```
 
 ### Descrição do Primeiro Gráfico
 
+Nestre primeiro grafico, buscamos conhecer o nosso dataset. Aqui já é possivel perceber que existem atributos que se aproximam de uma distribuição normal (Density, pH e sulphates). Algumas semelhanças entre os atributos, cujo extrapolamos uma relação como os dioxidos livres e totais alem dos acidos fixos e voláteis.
+
+Tambem não podemos deixar de notar os atributos que contém outliers como residual.sugar, chlorides, sulphates, etc. Isto gera um ponto de atenção para futuras analises.
+
+Porem o dado que mais me chama atenção no nosso dataset é a distribuição de quantidade de amostras entre as qualidades de vinho. Temos uma grande concentração de amostras nas categorias ***5*** e ***6***. Isto tem que ser levado em consideração, quando olhamos as matrizes de sccaterplot.
+
+Alem disto, esta grande concentração em poucas categorias pode tendenciar um futuro modelo de aprendizagem que planejamos utilizar.
+
 
 ### Segundo Gráfico
 ```{r echo=FALSE, Plot_Two}
+corrplot(correlated_wine)
 
 ```
 
 ### Descrição do Segundo Gráfico
 
+Após o primeiro contato com o dataset, partimos para a busca de conhecimento dentro dele. Para nos ajudar entender melhor como os atributos se relacionam, minha ideia foi plotar o grafico de matriz de correlação. Aqui cada variável é comparada com outra para gerar uma matriz onde podemos entender quais são as variáveis que melhor se relacionam e quais podem inferir em outras.
+
+Com o gráfico acima, podemos perceber algumas relações, mas a que mais me chamou a atenção foram duas, Alcool x Qualidade (+) e Acidez Volatiz x Qualidade (-). Isso me deixou curioso para entender se a relação entre Alcool e Acidez Volatil seria negativa como a Matriz nos mostra.
 
 ### Terceiro Gráfico
 ```{r echo=FALSE, Plot_Three}
-
+ggplot(data = wine,aes(y=wine$volatile.acidity, x=wine$alcohol,color=quality))+
+  geom_point(size=1,alpha=0.8)+
+  geom_smooth(method = 'lm', se = FALSE, size=2)+
+  scale_color_brewer(type='seq', guide = guide_legend(title = 'Qualidade'))+
+  ggtitle('Alcool e Acidez Volatil do Vinho Tinto Baseado na Qualidade')+
+  labs(x = 'Alcool',y='Acidez Volatil')
 ```
 
 ### Descrição do Terceiro Gráfico
 
+No gráfico acima, podemos ver como a relação do Alcool e Acidez pode interferir na qualidade do vinho. Os vinhos de melhor qualidade estão localizados com acidez baixa e alcool relativamente alto. Enquanto os vinhos de qualidade inferior (3 e 4) acabam na outra extremidade do gráfico.
+
+Em minha opinião isto mostra uma relação com a qualidade do vinho, os melhores vinhos estão distribuídos nas quantidades maiores de alcool, porém apenas isto não interfere na qualidade, visto que a maioria dos pontos estão entre 10 e 13. Porém quando adicionamos a Acidez Volatil no gráfico, fica evidente que os melhores vinhos estão na faixa menor de acidez (entre 0.2 e 0.6).
 ------
 
 # Reflexão
 
+Considerando que este foi meu primeiro trabalho de EDA em um nivel que considero profissional, minha maior dificuldade foi encontrar as perguntas corretas. É necessário ser criativo e analisar os dados de forma que as informações criadas não induzam ao erro.
 
+Então comecei analizando o formato dos meus dados, quantidade de amostras, quantidade de variaveis, a distribuição de quantidade de dados em cada atributo. Percebi que existiam muitos outliers em alguns atributos, o que me gerou algumas duvidas e receios de utilizar determinado atributo. Após este overview, comecei a explorar cada variavel separadamente. Neste passo descobrimos alguns dados importantes como a distribuição excessiva de amostras nas qualidades 5 e 6, a falta das qualidades 1,2,9 e 10. Isto gerou uma falta de confiança em prever resultados para outras qualidades alem da 5 e 6.
+
+Com uma filtragem simples dos dados para remover alguns dos maiores outliers, comecei a experimentar correlações entre as variaveis. Tentando excluir as relações diretas com qualidade, me chamou a atenção a relação negativa entre o PH e a Densidade e as demais variaveis que influem sobre acidez do vinho. Meu pensamento inicial é que quanto mais acidez tivessemos, maior seria o pH do vinho. Prém com a analise bivarial, encontrei o oposto deste pensamento. 
+
+Tambem achei surpreendente que a maioria dos compostos quimicos como residual sugar, chlorides e os dioxidos (total e free sulfur dioxide) não impactam significamente na qualidade do vinho. Meu insigth sobre isto é que eles classificam o vinho em outra categoria, porem não os comparam (e.g. bourbon, frisante, etc.).
+
+Como parte final, eu estava tentando cruzar mais variaveis para tentar encontrar combinações que impactassem na qualidade do vinho. Tentei fazer isto por correlação indireta, como explicado acima no gráfico 3. Apesar de encontrar uma relação com o plot de multivariaveis do gráfico 3 (Alcool x Acide sobre a Qualidade) não é possivel afirmar se esta relação é a causa ou efeito de um vinho bem avaliado.
+
+Para trabalhos futuros, seria ideal ter mais dados sobre outras qualidades de vinho, além de termos notas separadas por jurados onde ada amostra receberia 3 ou 4 notas de diferentes juizes. Além disso seria um bom teste tentar comparar esta base de dados com a base de dados de vinhos brancos para comparar se as mesmas hipoteses levantadas aqui são compativeis para diferentes tipos de vinho.
