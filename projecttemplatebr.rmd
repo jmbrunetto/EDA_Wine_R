@@ -1,4 +1,4 @@
-TÍTULO por SEU_NOME_AQUI
+Red Wine Analysis by Jonas Machado Brunetto
 ========================================================
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
@@ -10,61 +10,652 @@ TÍTULO por SEU_NOME_AQUI
 # Você deve definir echo=FALSE para todos os blocos de código no seu arquivo.
 
 library(ggplot2)
+library(GGally)
+library(dplyr)
+library(memisc)
+library(DAAG)
+library(Simpsons)
+library(pander)
+library(lazyeval)
+library(gridExtra)
+library(corrplot)
+library(tidyr)
+library(lattice)
+library(memisc)
+#theme_set(theme_minimal(20))
+
 ```
 
 ```{r echo=FALSE, Load_the_Data}
 # Carregamento dos dados
+# Carregando o arquivo wineQualityReds.csv
+wine <- read.csv('wineQualityReds.csv')
 
 ```
 
 # Seção de Gráficos Univariados
-```{r echo=FALSE, Univariate_Plots}
+Primeiro iremos conhecer nosso dataset, ver quais são suas colunas, variaveis e dimensões
 
+#### Variaveis
+```{r echo=FALSE, Univariate_Plots}
+names(wine)
+```
+#### Dimensão
+```{r}
+str(wine)
+dim(wine)
+```
+#### Estatísticas
+```{r}
+summary(wine)
 ```
 
 # Análise Univariada
 
+Primeiro, quero analizar o principal atributo do dataset em minha opinião, a variavel __qualidade__. E antes de começar a realizar correlações entre váriaveis, tambem vou analisar a distribuição de cada atributo individualmente.
+
+```{r}
+
+gg_list1 = list(ggplot(data=wine, aes(x=fixed.acidity)) +
+                  geom_histogram(binwidth = .5),
+                ggplot(data=wine, aes(x=volatile.acidity)) +
+                  geom_histogram(binwidth = 0.1),
+                ggplot(data=wine, aes(x=citric.acid)) +
+                  geom_histogram(binwidth = 0.1))
+gg_list2 = list(ggplot(data=wine, aes(x=residual.sugar)) +
+                  geom_histogram(binwidth = 0.3),
+                ggplot(data=wine, aes(x=chlorides)) +
+                  geom_histogram(binwidth = 0.05),
+                ggplot(data=wine, aes(x=free.sulfur.dioxide)) +
+                  geom_histogram(binwidth = 10))
+gg_list3 = list(ggplot(data=wine, aes(x=total.sulfur.dioxide)) +
+                  geom_histogram(binwidth = 10),
+                ggplot(data=wine, aes(x=density)) +
+                  geom_histogram(binwidth = 0.01),
+                ggplot(data=wine, aes(x=pH)) +
+                  geom_histogram(binwidth = 1))
+gg_list4 = list(ggplot(data=wine, aes(x=sulphates)) +
+                  geom_histogram(binwidth = 0.1),
+                ggplot(data=wine, aes(x=alcohol)) +
+                  geom_histogram(binwidth = 0.5),
+                ggplot(data=wine, aes(x=quality)) +
+                  geom_histogram(binwidth = 1))
+do.call(grid.arrange,c(gg_list1,gg_list2 ,gg_list3, gg_list4 , ncol = 3, nrow  =4))
+
+```
+## Analize Unitária
+#### "fixed.acidity"
+Def: Most acids involved with wine or fixed or nonvolatile (do not evaporate readily)
+
+```{r}
+ggplot(data = wine, aes(x=fixed.acidity))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  xlim(4.5, 16)+
+  scale_x_continuous(breaks = seq(0,1,0.1))+
+  labs(title = 'Histograma de Acidos Fixos em Vinhos Tintos')
+
+#ggplot(data = wine, aes(x=fixed.acidity))+
+#  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+#  xlim(0, quantile(wine$fixed.acidity, 0.98))+
+#  scale_x_continuous(breaks = seq(0,1,0.1))+
+#  labs(title = 'Histograma de Acidos Fixos em Vinhos Tintos')
+
+
+```
+A distribuição acima mostra uma concentração após o inicio da serie, e termina com alguns outliers e uma cauda relativamente curta.
+
+```{r}
+ggplot(data = wine, aes(x=fixed.acidity))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(4.5, 16), breaks = seq(0,1,0.1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da fixed.acidity em cada categoria de quality')
+ggplot(data = wine, aes(x=fixed.acidity))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(4.5, 16), breaks = seq(0,1,0.1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da fixed.acidity em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = fixed.acidity ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(4.5, 16))
+by(wine$fixed.acidity, wine$quality, sum)
+by(wine$fixed.acidity, wine$quality, summary)
+```
+
+Como fica evidente no primeiro grafico, temos uma quantidade de amostras muito superior nas categorias de qualidade 5 e qualidade 6, seguido pela Qualidade 7. Para melhor visualização das outras categorias criei o gráfico __Distribuição da fixed.acidity em cada categoria de quality (Escala de Y Livre)__ onde percebemos que a qualidade 3 e 8 tem poucas amostras para cada fixed.acidity.
+
+#### "volatile.acidity"
+Def: The amount of acetic acid in wine, which at too high of levels can lead to an unpleasant, vinegar taste
+```{r}
+ggplot(data = wine, aes(x=volatile.acidity))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.1, 1.6), breaks = seq(0,1.6,0.1))+
+  labs(title = 'Histograma de Acidos Volateis em Vinhos Tintos')
+```
+ Pelo histogama acima percebemos uma concentração de amostras entre o intervalo 0.3 e 0.7, vamos analisar mais detalhadamente a seguir.
+
+
+```{r}
+ggplot(data = wine, aes(x=volatile.acidity))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.1, 1.6), breaks = seq(0,1.6,0.1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da volatile.acidity em cada categoria de quality')
+ggplot(data = wine, aes(x=volatile.acidity))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.1, 1.6), breaks = seq(0,1.6,0.1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da volatile.acidity em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = volatile.acidity ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0.1, 1.6))
+by(wine$volatile.acidity, wine$quality, sum)
+by(wine$volatile.acidity, wine$quality, summary)
+```
+Confirmando a analise anterior, temos um volume significativamente maior nas Categorias 5 e 6. Apesar de termos poucas amostras nas qualidades mais baixas podemos observar pelas médias que quanto maior a qualidade do vinho, menor é a quantidade de acido volatil.
+
+#### "citric.acid"
+Def: Found in small quantities, citric acid can add 'freshness' and flavor to wines
+```{r}
+ggplot(data = wine, aes(x=citric.acid))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0,1,0.1))+
+  labs(title = 'Histograma de Acidos Volateis em Vinhos Tintos')
+```
+Sobre o ácido citrico, vemos que a maioria das amostras estão concentradas entre 0.1 e 0.5, vamos comparar com a qualidade dos vinhos para descobrir se quanto melhor o vinho menor o ácido citrico encontrado.
+```{r}
+ggplot(data = wine, aes(x=citric.acid))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0,1,0.1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da citric.acid em cada categoria de quality')
+ggplot(data = wine, aes(x=citric.acid))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0,1,0.1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da citric.acid em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = citric.acid ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0, 1))
+by(wine$citric.acid, wine$quality, sum)
+by(wine$citric.acid, wine$quality, summary)
+
+```
+
+Ao contrario do que imaginava inicialmente, as melhores categorias (7 e 8) mostraram que tem boas quantidades de vinhos com altos indices de Acido Citrico.
+
+Confirmamos isto olhando o crescimento da média conforme avançamos pelas quantidades
+
+#### "residual.sugar"
+Def: The amount of sugar remaining after fermentation stops, it's rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet
+
+Baseado na definição, procurei saber qual era a escala de doçura dos vinhos tintos. http://www.winedryness.com/
+
+```{r}
+wine$sweetness <- ifelse(wine$residual.sugar <= 0.900, 'Very Dry', # Primeiro Quartil
+                      ifelse(wine$residual.sugar < 1.900, 'Off Dry', # Segundo Quartil
+                             ifelse(wine$residual.sugar < 2.200, 'Medium',# Terceiro Quartil
+                                    ifelse(wine$residual.sugar < 2.600, 'Sweet', 'Very Sweet'))))
+
+wine$sweetness <- ordered(wine$sweetness,levels = c('Very Dry','Off Dry','Medium','Sweet','Very Sweet'))
+
+table(wine$sweetness)
+
+```
+
+```{r}
+grid.arrange(ggplot(data = wine, aes(x=residual.sugar))+
+               geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+               scale_x_continuous(limits = c(0, 16), breaks = seq(0,16,1))+
+               labs(title = 'Histograma de Residuos de Açucar em Vinhos Tintos'),
+             ggplot(data = wine, aes(x = sweetness)) +
+               geom_bar(width = 1, color = 'black',fill = I('blue'))+
+               labs(title = 'Escala de Doçura em Vinhos Tintos'))
+
+```
+
+Nesta variavel percebi que temos uma grande concentração de amostras entre 1 e 6, mas temos uma cauda extramemente longa pois existem poucas amostras com um indice de açucar muito alto.
+
+Tambem vemos que a escala que eu fiz baseado na função ___QUANTILE___ foi afetada por estes outliers.
+
+Abaixo mostramos o mesmo grafico aplicando o limite aonde se concentram 95% das amostras, para uma analise mais precisa.
+
+```{r}
+ggplot(data = wine, aes(x=residual.sugar))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  xlim(0, quantile(wine$residual.sugar, 0.95))+
+  #scale_x_continuous(breaks = seq(0,quantile(wine$residual.sugar, 0.95),1))+
+  labs(title = 'Histograma de Residuos de Açucar em Vinhos Tintos')
+        
+  #ggplot(data = wine, aes(x=fixed.acidity))+
+#  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+#  xlim(0, quantile(wine$fixed.acidity, 0.98))+
+  
+```
+
+Aqui o histograma parece melhor distribuido, sem os outliers puxando a cauda excessivamente longa. É bom lembrar, que este corte é apenas para melhor visualização da massa de dados, para os outros dados não iremos filtrar as amostras.
+
+
+```{r}
+ggplot(data = wine, aes(x=residual.sugar))+
+  geom_histogram(binwidth = 0.5, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(1, 16), breaks = seq(0,16,0.5))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da residual.sugar em cada categoria de quality')
+ggplot(data = wine, aes(x=residual.sugar))+
+  geom_histogram(binwidth = 0.5, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(1, 16), breaks = seq(0,16,0.5))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da residual.sugar em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = residual.sugar ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0, 16))
+by(wine$residual.sugar, wine$quality, sum)
+by(wine$residual.sugar, wine$quality, summary)
+```
+Pelo sccaterplot gerado, fica mais fácil percebemos que a os vinhos mais doces são mais escassos e nos mostram que são outliers.
+
+#### "chlorides"
+Def: The amount of salt in the wine
+
+```{r}
+ggplot(data = wine, aes(x=chlorides))+
+  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+  scale_x_continuous(breaks = seq(0,0.05,0.6))+
+  labs(title = 'Histograma de Cloretos em Vinhos Tintos')
+
+```
+Para o atributo chlorides, precisei diminuir o binwidth para 0.05 pois o intervalo é muito pequeno. Ele lembra o residual.sugar por sua cauda longa e outliers
+
+```{r}
+ggplot(data = wine, aes(x=chlorides))+
+  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0, 0.6), breaks = seq(0,0.6,0.05))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da chlorides em cada categoria de quality')
+ggplot(data = wine, aes(x=chlorides))+
+  geom_histogram(binwidth = 0.05, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0, 0.6), breaks = seq(0,0.6,0.05))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da chlorides em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = chlorides ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0, 0.6))
+by(wine$chlorides, wine$quality, sum)
+by(wine$chlorides, wine$quality, summary)
+
+```
+Apliquei um limite nos histogramas para melhor visualização devido aos outliers, mas percebemos uma diminuição no cloreto conforme a qualidade do vinho aumenta
+
+#### "free.sulfur.dioxide"
+Def: The free form of SO2 exists in equilibrium between molecular SO2 (as a dissolved gas) and bisulfite ion; it prevents microbial growth and the oxidation of wine
+```{r}
+ggplot(data = wine, aes(x=free.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(1,72), breaks = seq(1,72,2))+
+  labs(title = 'Histograma de Dioxidos Livres em Vinhos Tintos')
+```
+
+```{r}
+ggplot(data = wine, aes(x=free.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(1,72), breaks = seq(1,72,5))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da free.sulfur.dioxide em cada categoria de quality')
+ggplot(data = wine, aes(x=free.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(1,72), breaks = seq(1,72,5))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da free.sulfur.dioxide em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = free.sulfur.dioxide ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0, 75))
+by(wine$free.sulfur.dioxide, wine$quality, sum)
+by(wine$free.sulfur.dioxide, wine$quality, summary)
+```
+
+
+#### "total.sulfur.dioxide"
+Def: Amount of free and bound forms of S02; in low concentrations, SO2 is mostly undetectable in wine, but at free SO2 concentrations over 50 ppm, SO2 becomes evident in the nose and taste of wine
+```{r}
+ggplot(data = wine, aes(x=total.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(5,290), breaks = seq(5,290,5))+
+  labs(title = 'Histograma de Dioxidos Totais em Vinhos Tintos')
+```
+
+```{r}
+ggplot(data = wine, aes(x=total.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(5,290), breaks = seq(5,290,5))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da total.sulfur.dioxide em cada categoria de quality')
+ggplot(data = wine, aes(x=total.sulfur.dioxide))+
+  geom_histogram(binwidth = 1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(5,290), breaks = seq(5,290,5))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da total.sulfur.dioxide em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = total.sulfur.dioxide ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0, 290))
+by(wine$total.sulfur.dioxide, wine$quality, sum)
+by(wine$free.sulfur.dioxide, wine$quality, summary)
+```
+
+A variavel total.sulfur.dioxide parece seguir o mesmo padrão da free.sulfur.dioxide, pois são altamente correlacionadas.
+
+#### "density"
+Def: The density of water is close to that of water depending on the percent alcohol and sugar content
+```{r}
+ggplot(data = wine, aes(x=density))+
+  geom_histogram(binwidth = .001, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.9900,1.0040), breaks = seq(0.9900,1.0040,.01))+
+  labs(title = 'Histograma de Densidade em Vinhos Tintos')
+```
+Algo interessante aqui, a variavel density se assemelha a uma distribuição normal.
+
+```{r}
+ggplot(data = wine, aes(x=density))+
+  geom_histogram(binwidth = 0.001, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.9900,1.0040), breaks = seq(0.9900,1.0040,.01))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da density em cada categoria de quality')
+ggplot(data = wine, aes(x=density))+
+  geom_histogram(binwidth = .001, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.9900,1.0040), breaks = seq(0.9900,1.0040,.01))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da density em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = density ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0.9900,1.0040))
+by(wine$density, wine$quality, sum)
+by(wine$density, wine$quality, summary)
+
+```
+Não é possivel identificar mudança na density com o increase da qualidade.
+
+#### "pH"
+Def: Describes how acidic or basic a wine is on a scale from 0 (very acidic) to 14 (very basic); most wines are between 3-4 on the pH scale
+```{r}
+ggplot(data = wine, aes(x=pH))+
+  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(2.700,4.010), breaks = seq(2.7,4.1,.1))+
+  labs(title = 'Histograma de pH em Vinhos Tintos')
+
+```
+Assim como density, pH parece ser normalmente distribuido
+
+```{r}
+ggplot(data = wine, aes(x=pH))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(2.700,4.010), breaks = seq(2.7,4.1,.1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da pH em cada categoria de quality')
+ggplot(data = wine, aes(x=pH))+
+  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(2.700,4.010), breaks = seq(2.7,4.1,.1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da pH em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = pH ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(2.700,4.010))
+by(wine$pH, wine$quality, sum)
+by(wine$pH, wine$quality, summary)
+
+```
+
+#### "sulphates"
+Def: Awine additive which can contribute to sulfur dioxide gas (S02) levels, wich acts as an antimicrobial and antioxidant
+```{r}
+ggplot(data = wine, aes(x=sulphates))+
+  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.3,2), breaks = seq(0.3,2,.1))+
+  labs(title = 'Histograma de Sulfatos em Vinhos Tintos')
+```
+Distribuição de cauda longa, muito parecida com outras variaveis do banco de dados. Provavelmente existe uma correlação.
+
+```{r}
+ggplot(data = wine, aes(x=sulphates))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.3,2), breaks = seq(0.3,2,.1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da sulphates em cada categoria de quality')
+ggplot(data = wine, aes(x=sulphates))+
+  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(0.3,2), breaks = seq(0.3,2,.1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da sulphates em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = sulphates ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(0.3,2))
+by(wine$sulphates, wine$quality, sum)
+by(wine$sulphates, wine$quality, summary)
+```
+
+#### "alcohol"
+Def: The percent alcohol content of the wine
+```{r}
+ggplot(data = wine, aes(x=alcohol))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(8,15), breaks = seq(8,15,1))+
+  labs(title = 'Histograma de Alcool em Vinhos Tintos')
+```
+Tem uma forma similar ao grafico dos açucares residuais, poderia haver uma correlação.
+
+```{r}
+ggplot(data = wine, aes(x=alcohol))+
+  geom_histogram(binwidth = 0.1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(8,15), breaks = seq(8,15,1))+
+  facet_wrap(  ~ quality, ncol=2)+
+  labs(title = 'Distribuição da alcohol em cada categoria de quality')
+ggplot(data = wine, aes(x=alcohol))+
+  geom_histogram(binwidth = .1, color = 'black', fill = 'blue')+
+  scale_x_continuous(limits = c(8,15), breaks = seq(8,15,1))+
+  facet_wrap(  ~ quality, ncol=2, scales = 'free_y')+
+  labs(title = 'Distribuição da alcohol em cada categoria de quality (Escala de Y Livre)')
+ggplot(wine, aes( x = 1, y = alcohol ), xlab('Count of wines') ) + 
+               geom_jitter(alpha = 0.1 ) + # Alpha = 10% (10 pontos para virar um ponto completo)
+               geom_boxplot(alpha = 0.2, color = 'blue' ) +
+               scale_y_continuous(lim = c(8,15))
+by(wine$alcohol, wine$quality, sum)
+by(wine$alcohol, wine$quality, summary)
+```
+
+OBS: Todas definições foram extraídas do site (Kaggle)!https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009 e UCI!https://archive.ics.uci.edu/ml/datasets/wine+quality.
+
+
 ### Qual é a estrutura do conjunto de dados?
+Baseado no gráfico acima, eu diria que temos um banco de dados com muitas informações agrupadas e bastantes outliers para certos atributos (e.g: cholorides, residual.sugars,etc.) Iremos detalhar melhor estas distribuições durante o desenvolvimento do projeto.
+
+Existem 1599 linhas (observações) no nosso banco de dados com 12 atributos cada. Exite uma variavel categorica (quality) e 11 numericas que indicam resultados de analises quimicas nos vinhos testados.
+
+
 
 ### Quais são os principais atributos de interesse deste conjunto de dados?
+Na minha opinião a variavel mais importante é a qualidade do vinho (quality), apesar de não sabermos a formula usada para esta nota meu objetivo é encontrar a relação das outras variaveis com a nota de qualidade recebida.
 
 ### Quais outros atributos você acha que podem lhe auxiliar na investigação destes atributos de interesse?
+Acredito que as variaveis que indicam acidez do vinho (fixed.acidity,volatile.acidity, citric.acid,ph) e a variavel de açucar residual sejam as que mais impactem no sabor e na qualidade.
 
 ### Você criou novas variáveis a partir dos atributos existentes no conjunto de dados?
 
+Sim, criei a variavel de sweetness. Baseado na definição, procurei saber qual era a escala de doçura dos vinhos tintos. http://www.winedryness.com/
+
+Utilizei os quartis para definir os niveis, mas devido aos outliers, a maioria dos vinhos foi classificado como "Very Sweer".
+
 ### Dos atributos investigados, distribuições incomuns foram encontradas? Você aplicou operações nos dados para limpá-los, ajustá-los ou mudar a forma dos dados? Se sim, por quê?
+Encontrei algumas variaveis com muitos outliers, pelas funções de limite + quantile eu limitei a visualização para que mostrasse somente 95% dos dados. 
+
+Também foi necessário ajustar o ___binwidth___ para cada um dos histogramas para um melhor entendimento.
+
+
+
 
 
 
 # Seção de Gráficos Bivariados
 ```{r echo=FALSE, Bivariate_Plots}
 
+modified_wine <- subset((subset(wine, select = -X)), select = -sweetness)
+
+correlated_wine <- cor(modified_wine)
+round(correlated_wine,digits = 3)  
+
+corrplot(correlated_wine)
+
+# splom(modified_wine, data = modified_wine, groups = NULL,  axis.line.tck=0,axis.text.alpha = 0)
+
+#ggpairs(data = modified_wine)+
+  #labs(title='Generalized Pairs Plot')
 ```
+
+Pela matrix de correlação, podemos confimar algumas suposições que tinhamos.
+
+1 - Obviamente o free.sulfur.dioxide e total.sulfur.dioxide estão altamente correlacionados.
+2 - O fixed.acidity tem uma pequela relação com o volatile.acidity, mas uma ligação alta com citric.acid e density. 
+2.1 - É importante destacar a correlação negativa que o fixed.acidity tem com o pH do vinho
+3 - Enquanto o fixed.acidity tem uma correlação positiva com o citric.acid, o volatile.acidity tem uma fraca relação negativa com ele.
+3.1 - O volatile.acidity tambem tem uma relação negativa com a qualidade.
+4 - pH tem relação negativa com Fixed.acidity, citric.acidity e density.
+5 - Alcool tem uma das correlações mais fortes com a qualidade do vinho.
 
 # Análise Bivariada
 
+Para a análise Bivariada, vamos analisar os seguintes pares.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(wine, aes(x=fixed.acidity, y=citric.acid))+
+   geom_point(colour = "blue", fill = "blue", size = 2, stroke = 1, alpha = 1/5)+
+   stat_smooth(color='red',method='lm')+
+   labs(title='Scatterplot de Ácidos Fixos vs Acides Citrica em Vinhos Tintos',y='citric.acid')
+ ggplot(wine, aes(x=fixed.acidity, y=density))+
+   geom_point(colour = "blue", fill = "blue", size = 2, stroke = 1, alpha = 1/5)+
+   stat_smooth(color='red',method='lm')+
+   labs(title='Scatterplot de Ácidos Fixos vs Densidade em Vinhos Tintos')
+ ggplot(wine, aes(x=citric.acid, y=density))+
+   geom_point(colour = "blue", fill = "blue", size = 2, stroke = 1, alpha = 1/5)+
+   stat_smooth(color='red',method='lm')+
+   labs(title='Scatterplot de Acides Citrica vs Densidade em Vinhos Tintos')
+
+      
+```
+
+Os três gráficos acima mostram a correlação positiva entre as 3 principais variaveis de intensidade do vinho.
+
+Nas considerações iniciais, tambem vimos que o pH tem uma correlação negativa com a acidez fixa. Acidez fixa, por sua vez tem uma correlação positiva com densidade.
+Como considero a densidade uma variavel com peso maior na qualidade do vinho, vamos criar um grafico para verificar se a correlação do ph om a densidade existe, e se é positiva ou negativa.
+
+```{r}
+ggplot(wine, aes(x=pH, y=density))+
+  geom_point(colour = "blue", fill = "blue", size = 2, stroke = 1, alpha = 1/5)+
+  stat_smooth(color='red',method='lm')+
+  labs(title='Scatterplot de pH vs Densidade em Vinhos Tintos')
+```
+
+Observando o grafico, a massa de dados me parece estar concentrada no meio da distribuição, mas é possivel notar uma pequena correlação negativa entre estes dois atributos.
+
+Tambem observamos uma forte relação entre Alcool e Qualidade, por isto iremos criar um grafico para examinar melhor estes dois atributos.
+
+```{r}
+ggplot(wine, aes(x=quality, y=alcohol))+
+  geom_point(colour = "blue", fill = "blue", size = 2, stroke = 1, alpha = 1/5)+
+  stat_smooth(color='red',method='lm')+
+  labs(title='Scatterplot de Alcool vs Quality em Vinhos Tintos')
+```
+
+Como podemos perceber, por quality se tratar de uma variável categórica, o sccater ploot não é a visualização mais indicada, por isto iremos utilizar o Boxplot.
+
+```{r}
+ggplot(wine,aes(x=factor(quality), y = alcohol))+
+  geom_jitter(alpha=0.25)+
+  geom_boxplot(alpha=0.7, color = 'blue')+
+  stat_summary(fun.y = 'mean', geom = 'point',color='red',shape=4,size=2)+
+  labs(title='Boxplot da Qualidade vs Alcool do Vinho Tinto', 
+       y = 'alcohol (% by volume)')+
+  coord_cartesian(ylim = c(9,13))
+```
+
+Este gráfico demonstra a distribuição de amostras pela qualidade (Categórica) vs a quantidade de alcool, que prova a correlação positiva entre os dois atributos. A linha azul demonstra a media de alcool entre cada categoria, e o X vermelho a mediana.
+
 ### Discuta sobre alguns dos relacionamentos observados nesta parte da investigação. Como os atributos de interesse variaram no conjunto de dados?
+A analise bivarial e a matriz de correlação nos deram uma boa base para que pudessemos fazer algumas observações sobre a qualidade do vinho. Listei algumas que se destacaram mais na minha opinião:
+
+- A quantidade de alcool cresce a medida que a qualidade aumenta, porém acredito que não é a unica razão para a qualidade aumentar.
+- Ainda sobre a qualidade, ela parece diminuir conforme a acidez volátil diminui.
+- Os vinhos classificados como excelentes (7 -8) parecem ter uma concentração maior de Acido Citrico.
+- Apesar da fraca correlação, pouco Cloreto parece melhorar a qualidade.
+- Os melhores vinhos estão situados no começo do grafico de densidade, então com maiores densidades a qualidade é menor.
+- O açucar parece ter pouca influência na qualidade
+
 
 ### Você observou algum relacionamento interessante entre os outros atributos (os que não são de interesse)?
 
+O que mais me chamou a atenção foi a relação negativa entre o PH e a Densidade e as variaveis que influem sobre acidez do vinho. Meu pensamento inicial é que quanto mais acidez tivessemos, maior seria o pH do vinho. Com a analise bivarial, achamos o oposto deste pensamento. 
+
 ### Qual foi o relacionamento mais forte encontrado?
+Excluindo a correlação de total.sulfur.dioxide e free.sulfur.dioxide por serem parte de uma mesma variavel, ao meu ver a maior correlação encontrada foi entre a qualidade do vinho e as variaveis volatile.acidity e alcohol.
 
-
-
+Enquanto para o alcohol a correlação é positiva, para a volatile.acidity a correlação é negativa.
 
 # Seção de Gráficos Multivariados
 
+Vamos utilizar mais dados nas nossas observações. Com base na nossa Matriz de correlação vamos observar as duas maiores correlações em relação à qualidade.
+
 ```{r echo=FALSE, Multivariate_Plots}
 
+# Error: Continuous value supplied to discrete scale 
+# Para corrigir este erro fiz o comando
+wine$quality <- ordered(wine$quality, levels=c(1:10))
+
+ggplot(data = wine,aes(y=density, x=alcohol,color=quality))+
+  geom_point(size=1,alpha=0.8)+
+  geom_smooth(method = 'lm', se = FALSE, size=2)+
+  scale_color_brewer(type='seq', guide = guide_legend(title = 'Qualidade'))+
+  ggtitle('Alcool e Densidade do Vinho Tinto Baseado na Qualidade')+
+  labs(x = 'Alcool',y='Density (g/cm^3)')
 ```
+Analisando o grafico acima, a maior massa de amostras parece se encaixar no sentido Esquerda -> Direita, Cima->Baixo quando o alcool aumenta e a densidade diminui.
+
+```{r}
+ggplot(data = wine,aes(y=wine$fixed.acidity, x=pH,color=quality))+
+  geom_point(size=1,alpha=0.8)+
+  geom_smooth(method = 'lm', se = FALSE, size=2)+
+  scale_color_brewer(type='seq', guide = guide_legend(title = 'Qualidade'))+
+  ggtitle('Acidez Fixa e pH do Vinho Tinto Baseado na Qualidade')+
+  labs(x = 'pH',y='Acidez Fixa')
+```
+
+Observamos que a maioria dos pontos estão entre os valores de ph 3.0 e 3.5, alem disso conforme aumentamos o PH a Acidez diminui. Os melhores vinhos parecem estar abaixo de 3.5 pH.
+
+```{r}
+ggplot(data = wine,aes(y=wine$sulphates, x=wine$alcohol,color=quality))+
+  geom_point(size=1,alpha=0.8)+
+  geom_smooth(method = 'lm', se = FALSE, size=2)+
+  scale_color_brewer(type='seq', guide = guide_legend(title = 'Qualidade'))+
+  ggtitle('Alcool e Sulfato do Vinho Tinto Baseado na Qualidade')+
+  labs(x = 'Alcool',y='Sulfato')
+```
+
 
 # Análise Multivariada
 
 ### Discuta sobre os relacionamentos observados nesta parte da investigação. Quais atributos que fortaleceram os demais na observação das variáveis de interesse?
+A relação entre acidez fixa e pH parece fortalecer uma à outra. Baixos valores de pH implicam em uma alta acidez e pelos gráficos podemos observar exatamente isto. Tambem podemos observar que niveis elevados de Sulfato e Alcool parecem produzir melhores vinhos.
 
 ### Interações surpreendentes e/ou interessantes foram encontradas entre os atributos?
-
-### OPCIONAL: Modelos foram criados usando este conjunto de dados? Discuta sobre os pontos fortes e as limitações do seu modelo.
+Acredito que a interação mais importante realizada nesta secção, foi entre alcool e densidade por qualidade de vinho. Parece-me que o alcool diminui a densidade e acaba melhorando a qualidade do vinho.
 
 ------
 
